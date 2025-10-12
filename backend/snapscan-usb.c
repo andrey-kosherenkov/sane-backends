@@ -309,8 +309,7 @@ static SANE_Status usb_read(SANE_Int fd, void *buf, size_t n) {
     return status;
 }
 
-static SANE_Status usb_read_status(int fd, int *scsistatus, int *transaction_status,
-                                   char command)
+static SANE_Status usb_read_status(int fd, unsigned char *transaction_status, char command)
 {
     static const char me[] = "usb_read_status";
     unsigned char status_buf[8];
@@ -319,13 +318,8 @@ static SANE_Status usb_read_status(int fd, int *scsistatus, int *transaction_sta
 
     RETURN_ON_FAILURE(usb_read(fd,status_buf,8));
 
-    if(transaction_status)
-        *transaction_status = status_buf[0];
-
+    *transaction_status = status_buf[0];
     scsistat = (status_buf[1] & STATUS_MASK) >> 1;
-
-    if(scsistatus)
-        *scsistatus = scsistat;
 
     switch(scsistat) {
     case GOOD:
@@ -357,7 +351,8 @@ static SANE_Status usb_cmd(int fd, const void *src, size_t src_size,
                     void *dst, size_t * dst_size)
 {
   static const char me[] = "usb_cmd";
-  int status,tstatus;
+  SANE_Status status;
+  unsigned char tstatus;
   int cmdlen,datalen;
   char command;
 
@@ -380,7 +375,7 @@ static SANE_Status usb_cmd(int fd, const void *src, size_t src_size,
   RETURN_ON_FAILURE( usb_write(fd,src,cmdlen) );
 
   /* Read status */
-  RETURN_ON_FAILURE( usb_read_status(fd, NULL, &tstatus, command) );
+  RETURN_ON_FAILURE(usb_read_status(fd, &tstatus, command));
 
   /* Send data only if the scanner is expecting it */
   if(datalen > 0 && (tstatus == TRANSACTION_WRITE)) {
@@ -388,7 +383,7 @@ static SANE_Status usb_cmd(int fd, const void *src, size_t src_size,
       RETURN_ON_FAILURE( usb_write(fd, ((const SANE_Byte *) src) + cmdlen, datalen) );
 
       /* Read status */
-      RETURN_ON_FAILURE( usb_read_status(fd, NULL, &tstatus, command) );
+      RETURN_ON_FAILURE(usb_read_status(fd, &tstatus, command));
   }
 
   /* Receive data only when new data is waiting */
@@ -396,7 +391,7 @@ static SANE_Status usb_cmd(int fd, const void *src, size_t src_size,
       RETURN_ON_FAILURE( usb_read(fd,dst,*dst_size) );
 
       /* Read status */
-      RETURN_ON_FAILURE( usb_read_status(fd, NULL, &tstatus, command) );
+      RETURN_ON_FAILURE(usb_read_status(fd, &tstatus, command));
   }
 
   if(tstatus != TRANSACTION_COMPLETED) {
