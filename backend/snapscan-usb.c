@@ -81,6 +81,9 @@
 #define SHM_W 0
 #endif
 
+#define DEFAULT_TIMEOUT (30 * 1000) // 30 seconds
+#define FW_DOWNLOAD_TIMEOUT (2 * 1000) // 2 seconds
+
 /* Global variables */
 
 static snapscan_mutex_t snapscan_mutex;
@@ -371,6 +374,8 @@ static SANE_Status usb_cmd(int fd, const void *src, size_t src_size,
 
   DBG(DL_DATA_TRACE, "%s: cmdlen=%d, datalen=%d\n",me,cmdlen,datalen);
 
+   sanei_usb_set_timeout(DEFAULT_TIMEOUT);
+
   /* Send command to scanner */
   RETURN_ON_FAILURE( usb_write(fd,src,cmdlen) );
 
@@ -379,11 +384,19 @@ static SANE_Status usb_cmd(int fd, const void *src, size_t src_size,
 
   /* Send data only if the scanner is expecting it */
   if(datalen > 0 && (tstatus == TRANSACTION_WRITE)) {
+      int fw_download = command == SEND && ((unsigned char *)src)[2] == 0x87;
       /* Send data to scanner */
       RETURN_ON_FAILURE( usb_write(fd, ((const SANE_Byte *) src) + cmdlen, datalen) );
 
-      /* Read status */
-      RETURN_ON_FAILURE(usb_read_status(fd, &tstatus, command));
+      /* If downloading firmware, don't wait too long, scanner may not send a response */
+      if (fw_download)
+          sanei_usb_set_timeout(FW_DOWNLOAD_TIMEOUT);
+      status = usb_read_status(fd, &tstatus, command);
+      if (fw_download) {
+          sanei_usb_set_timeout(DEFAULT_TIMEOUT);
+          if (status == SANE_STATUS_IO_ERROR)
+              return SANE_STATUS_GOOD;
+      }
   }
 
   /* Receive data only when new data is waiting */
