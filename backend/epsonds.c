@@ -3629,8 +3629,23 @@ sane_read(SANE_Handle handle, SANE_Byte *data, SANE_Int max_length, SANE_Int *le
 void
 sane_cancel(SANE_Handle handle)
 {
+	epsonds_scanner *s = (epsonds_scanner *)handle;
 	DBG(1, "** %s\n", __func__);
-	((epsonds_scanner *)handle)->canceling = SANE_TRUE;
+
+	/* For ADF scanners: properly end and restart the scanning session.
+	 * Without this, ADF scanners like ES-60W report NO_DOCS on second scan
+	 * even when new paper is inserted, because the scanner is still in the
+	 * "previous job completed" state. */
+	if (s->locked && !s->canceling && !s->isflatbedScan) {
+		esci2_fin(s);
+		eds_lock(s);
+		esci2_resa(s);
+	}
+
+	s->canceling = SANE_TRUE;
+	s->scanEnd = 0;
+	s->scanning = 0;
+	s->pages = 0;
 }
 
 /*
