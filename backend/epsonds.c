@@ -2080,6 +2080,27 @@ init_options(epsonds_scanner *s)
 		s->opt[OPT_ADF_CRP].cap |= SANE_CAP_INACTIVE;
 	}
 
+	/* "Sensors" group: */
+	s->opt[OPT_SENSOR_GROUP].name = SANE_NAME_SENSORS;
+	s->opt[OPT_SENSOR_GROUP].title = SANE_TITLE_SENSORS;
+	s->opt[OPT_SENSOR_GROUP].desc = SANE_DESC_SENSORS;
+	s->opt[OPT_SENSOR_GROUP].type = SANE_TYPE_GROUP;
+	s->opt[OPT_SENSOR_GROUP].cap = SANE_CAP_ADVANCED;
+
+	/* button 1 (scan button) */
+	s->opt[OPT_BUTTON_1].name = "button-1";
+	s->opt[OPT_BUTTON_1].title = SANE_I18N("Scan button");
+	s->opt[OPT_BUTTON_1].desc = SANE_I18N("Scan button status (1 = pressed)");
+	s->opt[OPT_BUTTON_1].type = SANE_TYPE_INT;
+	s->opt[OPT_BUTTON_1].unit = SANE_UNIT_NONE;
+	s->opt[OPT_BUTTON_1].size = sizeof(SANE_Int);
+	s->opt[OPT_BUTTON_1].cap = SANE_CAP_SOFT_DETECT | SANE_CAP_HARD_SELECT | SANE_CAP_ADVANCED;
+	s->opt[OPT_BUTTON_1].constraint_type = SANE_CONSTRAINT_NONE;
+	s->val[OPT_BUTTON_1].w = 0;
+
+	if (!s->hw->has_button)
+		s->opt[OPT_BUTTON_1].cap |= SANE_CAP_INACTIVE;
+
 	return SANE_STATUS_GOOD;
 }
 
@@ -2270,6 +2291,14 @@ getvalue(SANE_Handle handle, SANE_Int option, void *value)
 	case OPT_MODE:
 	case OPT_SOURCE:
 		strcpy((char *) value, sopt->constraint.string_list[sval->w]);
+		break;
+
+	case OPT_BUTTON_1:
+		{
+			SANE_Bool pressed = SANE_FALSE;
+			eds_read_button(s, &pressed);
+			*((SANE_Word *) value) = pressed ? 1 : 0;
+		}
 		break;
 
 	default:
