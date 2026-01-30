@@ -2087,10 +2087,10 @@ init_options(epsonds_scanner *s)
 	s->opt[OPT_SENSOR_GROUP].type = SANE_TYPE_GROUP;
 	s->opt[OPT_SENSOR_GROUP].cap = SANE_CAP_ADVANCED;
 
-	/* button 1 (scan button) */
-	s->opt[OPT_BUTTON_1].name = "button-1";
-	s->opt[OPT_BUTTON_1].title = SANE_I18N("Scan button");
-	s->opt[OPT_BUTTON_1].desc = SANE_I18N("Scan button status (1 = pressed)");
+	/* scan button */
+	s->opt[OPT_BUTTON_1].name = SANE_NAME_SCAN;
+	s->opt[OPT_BUTTON_1].title = SANE_TITLE_SCAN;
+	s->opt[OPT_BUTTON_1].desc = SANE_DESC_SCAN;
 	s->opt[OPT_BUTTON_1].type = SANE_TYPE_INT;
 	s->opt[OPT_BUTTON_1].unit = SANE_UNIT_NONE;
 	s->opt[OPT_BUTTON_1].size = sizeof(SANE_Int);
