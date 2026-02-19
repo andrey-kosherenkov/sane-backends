@@ -40,6 +40,7 @@
 
 #include "sane/config.h"
 
+#include <assert.h>
 #include <ctype.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -2687,6 +2688,7 @@ sane_get_parameters(SANE_Handle handle, SANE_Parameters *params)
 				if (s->params.format == SANE_FRAME_RGB)
 				{
 					s->params.bytes_per_line = s->width_front * 3;
+
 					s->params.pixels_per_line = s->width_front;
 				}
 
@@ -3356,7 +3358,15 @@ static SANE_Status acquire_jpeg_data(epsonds_scanner* s)
 
 
 	s->frontJpegBuf = malloc(jpegBufSize);
+	if (!s->frontJpegBuf) {
+		return SANE_STATUS_NO_MEM;
+	}
 	s->backJpegBuf = malloc(jpegBufSize);
+	if (!s->backJpegBuf) {
+		free(s->frontJpegBuf);
+		s->frontJpegBuf = NULL;
+		return SANE_STATUS_NO_MEM;
+	}
 	s->frontJpegBufLen  = 0;
 	s->backJpegBufLen = 0;
 
@@ -3369,12 +3379,20 @@ static SANE_Status acquire_jpeg_data(epsonds_scanner* s)
 
 	status = eds_ring_init(&s->front, (s->params.bytes_per_line) * s->params.lines);
 	if (status != SANE_STATUS_GOOD) {
-				return status;
+		free(s->frontJpegBuf);
+		free(s->backJpegBuf);
+		s->frontJpegBuf = NULL;
+		s->backJpegBuf = NULL;
+		return status;
 	}
 
 	status = eds_ring_init(&s->back, (s->params.bytes_per_line) * s->params.lines);
 	if (status != SANE_STATUS_GOOD) {
-			return status;
+		free(s->frontJpegBuf);
+		free(s->backJpegBuf);
+		s->frontJpegBuf = NULL;
+		s->backJpegBuf = NULL;
+		return status;
 	}
 
 	while (1)
@@ -3388,10 +3406,12 @@ static SANE_Status acquire_jpeg_data(epsonds_scanner* s)
 				SANE_Byte* backBuffer = s->backJpegBuf + s->backJpegBufLen;
 				memcpy(backBuffer, s->buf, read);
 				s->backJpegBufLen += read;
+				assert(s->backJpegBufLen <= jpegBufSize);
 			}else{
 				SANE_Byte* frontBuffer = s->frontJpegBuf +  s->frontJpegBufLen ;
 				memcpy(frontBuffer, s->buf, read);
 				s->frontJpegBufLen  += read;
+				assert(s->frontJpegBufLen <= jpegBufSize);
 			}
 		}
 		if (status == SANE_STATUS_GOOD)
