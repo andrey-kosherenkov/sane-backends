@@ -584,7 +584,7 @@ get_info (void)
 	{
 	  gp_list_get_name (dir_list, n, &val);
 	  folder_list[n] = strdup (val);
-	  if (strchr ((const char *) folder_list[n], ' '))
+	  if (strchr (folder_list[n], ' '))
 	    {
 	      *strchr (folder_list[n], ' ') = '\0';
 	    }
